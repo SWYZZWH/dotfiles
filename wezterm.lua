@@ -71,6 +71,9 @@ local cfg = {
     -- Pane splits: Ctrl+Shift+| vertical divider (left/right), Ctrl+Shift+- horizontal divider (top/bottom)
     { key = "|", mods = "CTRL|SHIFT", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
     { key = "_", mods = "CTRL|SHIFT", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+    -- Close current pane
+    { key = "x", mods = "CTRL|SHIFT", action = act.CloseCurrentPane({ confirm = true }) },
+    { key = "X", mods = "CTRL|SHIFT", action = act.CloseCurrentPane({ confirm = true }) },
 
     -- Tab switching
     { key = "Tab", mods = "CTRL",        action = act.ActivateTabRelative(1)  },
@@ -102,10 +105,31 @@ local cfg = {
   },
 }
 
--- Append a red ● bubble to any inactive tab that has unseen output
--- (triggered by BEL — Claude Code rings the bell on session finished,
--- permission prompts, or other attention-needed events).
+-- Track tabs that have rung the bell. Cleared when the tab becomes active.
+-- Using a module-local table keyed by tab_id.
+local tab_bell = {}
+
+wezterm.on("bell", function(window, pane)
+  -- Find which tab this pane belongs to and mark it
+  local mux_win = window:mux_window()
+  for _, item in ipairs(mux_win:tabs_with_info()) do
+    for _, p in ipairs(item.tab:panes()) do
+      if p:pane_id() == pane:pane_id() then
+        if not item.is_active then
+          tab_bell[item.tab:tab_id()] = true
+        end
+        return
+      end
+    end
+  end
+end)
+
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
+  -- Clear the marker if this tab is active (user has seen it)
+  if tab.is_active then
+    tab_bell[tab.tab_id] = nil
+  end
+
   local title = tab.tab_title
   if title == nil or #title == 0 then
     title = tab.active_pane.title
@@ -113,12 +137,18 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
   local idx = tab.tab_index + 1
   local label = " " .. idx .. ": " .. title .. " "
 
-  if (not tab.is_active) and tab.has_unseen_output then
+  -- Show bubble if bell fired OR pane has unseen output (belt and suspenders)
+  local needs_attention = tab_bell[tab.tab_id]
+    or (not tab.is_active and tab.active_pane.has_unseen_output)
+
+  if needs_attention then
     return {
-      { Text = label },
-      { Foreground = { Color = "#ff3b30" } },
-      { Text = "● " },
+      { Background = { Color = "#ff3b30" } },
+      { Foreground = { Color = "#ffffff" } },
+      { Attribute = { Intensity = "Bold" } },
+      { Text = " ● " },
       "ResetAttributes",
+      { Text = label },
     }
   end
   return label
