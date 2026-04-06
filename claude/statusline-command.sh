@@ -32,9 +32,13 @@ if [[ "$cwd" =~ ^[A-Za-z]: ]]; then
   cwd=$(cygpath -u "$cwd" 2>/dev/null || echo "$cwd")
 fi
 short_dir="${cwd/#$home_dir/\~}"
-# Trim to last 3 path components if deep
-short_dir=$(echo "$short_dir" | awk -F'/' '{
-  n=NF; if(n>3){ printf "…"; for(i=n-2;i<=n;i++) printf "/"$i } else print $0 }')
+# Only the basename — drop all parent components. Keeps the line short
+# enough to survive narrow terminals. If the basename itself is long,
+# truncate it to 24 chars with a middle ellipsis.
+short_dir=$(basename "$short_dir")
+if [ ${#short_dir} -gt 24 ]; then
+  short_dir="${short_dir:0:11}…${short_dir: -12}"
+fi
 
 # --- Git branch (skip optional locks) ---
 git_branch=""
