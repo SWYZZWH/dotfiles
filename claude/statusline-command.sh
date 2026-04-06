@@ -16,13 +16,14 @@ parsed=$(
           j.vim?.mode || "",
           j.rate_limits?.five_hour?.used_percentage ?? "",
           j.rate_limits?.seven_day?.used_percentage ?? "",
+          j.session_id || "",
         ];
         process.stdout.write(out.join("|"));
-      } catch(e) { process.stdout.write("|||||"); }
+      } catch(e) { process.stdout.write("||||||"); }
     });
   ' <<< "$input"
 )
-IFS=$'|' read -r cwd model used vim_mode five_pct week_pct <<< "$parsed"
+IFS=$'|' read -r cwd model used vim_mode five_pct week_pct session_id <<< "$parsed"
 
 # --- Directory: shorten home to ~ ---
 home_dir=$(cygpath -u "$USERPROFILE" 2>/dev/null || echo "$HOME")
@@ -105,6 +106,11 @@ if [ -n "$vim_mode" ]; then
     *)       vm_color="$fg_white"  ;;
   esac
   out="${out}  ${bold}${vm_color}${vim_mode}${reset}"
+fi
+
+# Fork-session command line (second line, copy-pasteable)
+if [ -n "$session_id" ]; then
+  out="${out}\n${dim}fork:${reset} c --resume ${session_id} --fork-session"
 fi
 
 printf "%b" "$out"
