@@ -92,6 +92,36 @@ local cfg = {
     { key = "x", mods = "CTRL|SHIFT", action = act.CloseCurrentPane({ confirm = true }) },
     { key = "X", mods = "CTRL|SHIFT", action = act.CloseCurrentPane({ confirm = true }) },
 
+    -- Switch panes by direction
+    { key = "UpArrow",    mods = "CTRL|SHIFT", action = act.ActivatePaneDirection("Up")    },
+    { key = "DownArrow",  mods = "CTRL|SHIFT", action = act.ActivatePaneDirection("Down")  },
+    { key = "LeftArrow",  mods = "CTRL|SHIFT", action = act.ActivatePaneDirection("Left")  },
+    { key = "RightArrow", mods = "CTRL|SHIFT", action = act.ActivatePaneDirection("Right") },
+
+    -- Rename current tab (prompt input line overlays the tab bar)
+    {
+      key = "r", mods = "CTRL|SHIFT",
+      action = act.PromptInputLine({
+        description = "Enter new tab name:",
+        action = wezterm.action_callback(function(window, pane, line)
+          if line then
+            window:active_tab():set_title(line)
+          end
+        end),
+      }),
+    },
+    {
+      key = "R", mods = "CTRL|SHIFT",
+      action = act.PromptInputLine({
+        description = "Enter new tab name:",
+        action = wezterm.action_callback(function(window, pane, line)
+          if line then
+            window:active_tab():set_title(line)
+          end
+        end),
+      }),
+    },
+
     -- Session save/restore (resurrect.wezterm)
     {
       key = "s", mods = "CTRL|SHIFT|ALT",
