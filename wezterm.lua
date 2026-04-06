@@ -124,8 +124,16 @@ wezterm.on("bell", function(window, pane)
   end
 end)
 
+-- Clear bell markers whenever the active tab changes (user "checked" it)
+wezterm.on("update-status", function(window, pane)
+  local active = window:active_tab()
+  if active ~= nil then
+    tab_bell[active:tab_id()] = nil
+  end
+end)
+
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
-  -- Clear the marker if this tab is active (user has seen it)
+  -- Also clear on render for the active tab, belt and suspenders
   if tab.is_active then
     tab_bell[tab.tab_id] = nil
   end
@@ -137,11 +145,10 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
   local idx = tab.tab_index + 1
   local label = " " .. idx .. ": " .. title .. " "
 
-  -- Show bubble if bell fired OR pane has unseen output (belt and suspenders)
-  local needs_attention = tab_bell[tab.tab_id]
-    or (not tab.is_active and tab.active_pane.has_unseen_output)
-
-  if needs_attention then
+  -- Show bubble ONLY if bell fired on an inactive tab.
+  -- (Do not fall back to has_unseen_output — it can stay true and
+  -- make the bubble sticky even after the user checks the tab.)
+  if tab_bell[tab.tab_id] then
     return {
       { Background = { Color = "#ff3b30" } },
       { Foreground = { Color = "#ffffff" } },
