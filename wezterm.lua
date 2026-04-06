@@ -68,6 +68,10 @@ local cfg = {
     { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
     { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
 
+    -- Pane splits: Ctrl+Shift+| vertical divider (left/right), Ctrl+Shift+- horizontal divider (top/bottom)
+    { key = "|", mods = "CTRL|SHIFT", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+    { key = "_", mods = "CTRL|SHIFT", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+
     -- Tab switching
     { key = "Tab", mods = "CTRL",        action = act.ActivateTabRelative(1)  },
     { key = "Tab", mods = "CTRL|SHIFT",  action = act.ActivateTabRelative(-1) },
