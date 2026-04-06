@@ -48,6 +48,26 @@ local cfg = {
     { key = "t", mods = "CMD",       action = act.SpawnTab("CurrentPaneDomain") },
     { key = "w", mods = "CMD",       action = act.CloseCurrentTab({ confirm = true }) },
 
+    -- Copy / paste with plain Ctrl+C / Ctrl+V.
+    -- Ctrl+C copies when there's a selection, otherwise sends SIGINT (\x03)
+    -- so terminal interrupt behavior is preserved.
+    {
+      key = "c", mods = "CTRL",
+      action = wezterm.action_callback(function(window, pane)
+        local sel = window:get_selection_text_for_pane(pane)
+        if sel and #sel > 0 then
+          window:perform_action(act.CopyTo("ClipboardAndPrimarySelection"), pane)
+          window:perform_action(act.ClearSelection, pane)
+        else
+          window:perform_action(act.SendString("\x03"), pane)
+        end
+      end),
+    },
+    { key = "v", mods = "CTRL",      action = act.PasteFrom("Clipboard") },
+    -- Keep Ctrl+Shift+C/V as an always-copy / always-paste fallback
+    { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
+    { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
+
     -- Tab switching
     { key = "Tab", mods = "CTRL",        action = act.ActivateTabRelative(1)  },
     { key = "Tab", mods = "CTRL|SHIFT",  action = act.ActivateTabRelative(-1) },
