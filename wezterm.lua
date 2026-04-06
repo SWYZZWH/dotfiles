@@ -4,6 +4,13 @@
 local wezterm = require 'wezterm'
 local act = wezterm.action
 
+-- Session restore plugin. First startup clones the repo automatically into
+-- ~/.local/share/wezterm/plugins (Windows equivalent). Safe to call even if
+-- the plugin is missing — we pcall below.
+local ok_resurrect, resurrect = pcall(function()
+  return wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
+end)
+
 local cfg = {
   -- Visuals
   font = wezterm.font_with_fallback({ "JetBrainsMono Nerd Font", "Symbols Nerd Font" }),
@@ -75,6 +82,39 @@ local cfg = {
     { key = "x", mods = "CTRL|SHIFT", action = act.CloseCurrentPane({ confirm = true }) },
     { key = "X", mods = "CTRL|SHIFT", action = act.CloseCurrentPane({ confirm = true }) },
 
+    -- Session save/restore (resurrect.wezterm)
+    {
+      key = "s", mods = "CTRL|SHIFT|ALT",
+      action = wezterm.action_callback(function(win, pane)
+        if ok_resurrect then
+          resurrect.state_manager.save_state(
+            resurrect.workspace_state.get_workspace_state()
+          )
+          win:toast_notification("wezterm", "workspace saved", nil, 2000)
+        end
+      end),
+    },
+    {
+      key = "r", mods = "CTRL|SHIFT|ALT",
+      action = wezterm.action_callback(function(win, pane)
+        if not ok_resurrect then return end
+        resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id, label)
+          local type = string.match(id, "^([^/]+)") or "workspace"
+          id = string.match(id, "([^/]+)$")
+          id = string.match(id, "(.+)%..+$") or id
+          local state = resurrect.state_manager.load_state(id, type)
+          if state then
+            resurrect.workspace_state.restore_workspace(state, {
+              window = win:mux_window(),
+              relative = true,
+              restore_text = true,
+              on_pane_restore = resurrect.tab_state.default_on_pane_restore,
+            })
+          end
+        end)
+      end),
+    },
+
     -- Tab switching
     { key = "Tab", mods = "CTRL",        action = act.ActivateTabRelative(1)  },
     { key = "Tab", mods = "CTRL|SHIFT",  action = act.ActivateTabRelative(-1) },
@@ -131,6 +171,38 @@ wezterm.on("update-status", function(window, pane)
     tab_bell[active:tab_id()] = nil
   end
 end)
+
+-- ---------------------------------------------------------------------------
+-- Session restore: auto-save every 5 minutes, auto-restore on startup
+-- ---------------------------------------------------------------------------
+if ok_resurrect then
+  -- Save workspace state every 5 minutes
+  resurrect.state_manager.periodic_save({
+    interval_seconds = 300,
+    save_workspaces = true,
+    save_windows = true,
+    save_tabs = true,
+  })
+  -- Quieter notifications (only warn on error)
+  resurrect.state_manager.set_max_nlines(5000)
+
+  wezterm.on("gui-startup", function(cmd)
+    local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
+    local ok, state = pcall(
+      resurrect.state_manager.load_state, "default", "workspace"
+    )
+    if ok and state then
+      pcall(function()
+        resurrect.workspace_state.restore_workspace(state, {
+          window = window:gui_window(),
+          relative = true,
+          restore_text = true,
+          on_pane_restore = resurrect.tab_state.default_on_pane_restore,
+        })
+      end)
+    end
+  end)
+end
 
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
   -- Also clear on render for the active tab, belt and suspenders
