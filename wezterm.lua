@@ -62,6 +62,8 @@ local cfg = {
     -- New/close tab (Mac muscle memory)
     { key = "t", mods = "CMD",       action = act.SpawnTab("CurrentPaneDomain") },
     { key = "w", mods = "CMD",       action = act.CloseCurrentTab({ confirm = true }) },
+    { key = "w", mods = "CTRL",      action = act.CloseCurrentTab({ confirm = true }) },
+    { key = "t", mods = "CTRL",      action = act.SpawnTab("CurrentPaneDomain") },
 
     -- Copy / paste with plain Ctrl+C / Ctrl+V.
     -- Ctrl+C copies when there's a selection, otherwise sends SIGINT (\x03)
