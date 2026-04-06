@@ -12,6 +12,14 @@ local ok_resurrect, resurrect = pcall(function()
 end)
 
 local cfg = {
+  -- Default shell: Git Bash (login shell so .bash_profile → .bashrc run)
+  default_prog = { "C:/Program Files/Git/bin/bash.exe", "-l", "-i" },
+  set_environment_variables = {
+    -- Make sure Git Bash's mingw64 tooling is on PATH before system tools
+    CHERE_INVOKING = "1",
+    MSYSTEM = "MINGW64",
+  },
+
   -- Visuals
   font = wezterm.font_with_fallback({ "JetBrainsMono Nerd Font", "Symbols Nerd Font" }),
   font_size = 13.0,
